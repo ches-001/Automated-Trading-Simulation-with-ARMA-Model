@@ -94,11 +94,11 @@ class PipeLine:
                 print('connection error, retrying...')
                 continue
             
-            """if not current_quote['is_market_open']:
+            if not current_quote['is_market_open']:
                 self.MakeNewDataRecord()
                 self.trainModel(use_all=True)
                 print('The Market is currently closed')
-                break"""
+                break
             
             last_timestamp = self.closing_prices_.index[-1]
             quote_timestamp = pd.Timestamp(current_quote['datetime'])
@@ -133,5 +133,5 @@ class PipeLine:
                     'prediction':prediction,
                     'actual_price':None,
                 }
-                #cycles+=1
+                cycles+=1
             time.sleep(10)
