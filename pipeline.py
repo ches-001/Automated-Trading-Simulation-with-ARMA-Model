@@ -7,10 +7,11 @@ from datetime import datetime
 import matplotlib.pyplot as plt
 
 class PipeLine:
-    def __init__(self, model:ARMA, td:TwelveDataApiUtils):
+    def __init__(self, model:ARMA, td:TwelveDataApiUtils, session_duration:int=None):
         self.model = model
         self.td = td
-
+        self.session_duration = session_duration
+        
         self.date_ = datetime.now().strftime('%Y-%m-%d')
         self.dir_name_ = 'logs'
         self.log_filename_ = f'log-{self.date_}.json'
@@ -19,9 +20,16 @@ class PipeLine:
         self.getClosingPrices()
         self.trainModel()
 
+        self.start_time_ = self.getCurrentTime()
+        self.stop_time_ = self.start_time_ + pd.to_timedelta(self.session_duration, unit='S') if self.session_duration else None
+
         self.info_to_log_ = None
         self.profit_loss_count_ = {'profit':0, 'loss':0}
         
+
+    def getCurrentTime(self)->pd.Timestamp:
+        return pd.Timestamp(datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+
 
     def MakeNewDataRecord(self)->None:
         return self.td.writeData()
@@ -91,12 +99,25 @@ class PipeLine:
         else:
             self.profit_loss_count_['loss'] += 1
 
+    
+    def finalEvents(self)->None:
+        self.MakeNewDataRecord()
+        self.trainModel(use_all=True)
+        #plot profit and loss counts in bar chart
+        plt.bar(self.profit_loss_count_.keys(), self.profit_loss_count_.values(), width=0.5)
+
 
     def eventLoop(self)->None:        
         cycles = 0
         loop_delay = 10
         
         while True:
+            if self.stop_time_:
+                if self.getCurrentTime() >= self.stop_time_:
+                    print(f'session duration has elapsed at {self.getCurrentTime()}')
+                    self.finalEvents()
+                    break
+
             current_quote = None
             try:
                 current_quote = self.td.getQuote()
@@ -105,11 +126,8 @@ class PipeLine:
                 continue
             
             if not current_quote['is_market_open']:
-                self.MakeNewDataRecord()
-                self.trainModel(use_all=True)
-                #plot profit and loss counts in bar chart after session
-                plt.bar(self.profit_loss_count_.keys(), self.profit_loss_count_.values(), width=0.5)
                 print('The Market is currently closed')
+                self.finalEvents()
                 break
             
             last_timestamp = self.closing_prices_.index[-1]

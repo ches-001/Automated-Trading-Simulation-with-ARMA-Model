@@ -83,5 +83,7 @@ class TwelveDataApiUtils:
 
     
     def raiseErrorOnBadRequest(self, request_content:dict)->None:
-        if 'status' in request_content.keys() and request_content['status'] == 'error':
-            raise ValueError(request_content)
+        bad_request = 'status' in request_content.keys() and request_content['status'] == 'error'
+        exceeded_qouta = 'message' in request_content.keys() and 'status' not in request_content.keys()
+        if bad_request or exceeded_qouta:
+            raise Exception(request_content)

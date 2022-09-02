@@ -21,4 +21,6 @@ This for educational purpose, use this for actual trading of stocks at your own 
 5. Finally, run the `main.py` file with the following command `python maim.py`.
 
 
-You can change the stock symbol, interval and outputsize in the `main.py` file.
+You can change the stock symbol, interval, outputsize and active duration in the `main.py` file.
+
+Note that not specifying an active duration will make the program run till the stock market is closed, if you choose to do this, endevour to subscribe to a plan that offers unlimited API credits (which the basic plan does not offer), failure to do so will result in an error after daily qouta of API credits have been used up.
