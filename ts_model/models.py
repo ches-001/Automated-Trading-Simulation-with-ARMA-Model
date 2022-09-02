@@ -11,6 +11,7 @@ class AutoRegressionModel:
         self.coef_ = None
         self.intercept_ = None
         
+
     def fit(self, X:pd.Series):
         data_df = pd.DataFrame()
         
@@ -29,6 +30,7 @@ class AutoRegressionModel:
         
         params = XX_cor_inv @ XY_cor
         self.coef_, self.intercept_ = params[:-1], params[-1]
+
 
     def predict(self, X:Union[np.ndarray, pd.Series])->np.ndarray:
         if isinstance(X, pd.Series):
@@ -50,6 +52,7 @@ class MovingAverageModel:
 
         self.coef_ = None
         self.intercept_ = None
+
 
     def fit(self, X:pd.Series):
         self.ar_estimator.fit(X)
@@ -74,6 +77,7 @@ class MovingAverageModel:
         params = XX_cor_inv @ XY_cor
         self.coef_ = params[:-1]
         self.intercept_ = params[-1]
+
 
     def predict(self, X:Union[np.ndarray, pd.Series])->np.ndarray:
         if not isinstance(X, pd.Series):
@@ -103,11 +107,13 @@ class ARMA:
         if self.p >= self.estimator_lags:
              raise ValueError(f'p({self.p}) must be less than estimator_lag({self.estimator_lags})')
 
+
     def _getLags(self, series:pd.Series, nlags:int, lag_type:str)->pd.DataFrame:
         df = pd.DataFrame()
         for i in range(1, nlags+1):
             df[f'{lag_type}_{i}'] = series.shift(i)
         return df
+
 
     def fit(self, X:pd.Series):
         self.ar_estimator.fit(X)
@@ -132,6 +138,7 @@ class ARMA:
         
         params = XX_cor_inv @ XY_cor
         self.coef_, self.intercept_ = params[:-1], params[-1]
+
 
     def predict(self, X:Union[np.ndarray, pd.Series])->np.ndarray:
         if not isinstance(X, pd.Series):

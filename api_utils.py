@@ -36,9 +36,11 @@ class TwelveDataApiUtils:
 
         url = f'{self.api_domain}time_series'
         r = requests.get(url, headers=self.headers, params=self.querystring)
+        content = json.loads(r.text)
+
+        self.raiseErrorOnBadRequest(content)
         
         with open(file, 'w') as f:
-            content = json.loads(r.text)
             json.dump(content['values'], f)
         f.close()
 
@@ -65,10 +67,21 @@ class TwelveDataApiUtils:
     def getCurrentPrice(self)->dict:
         url = f'{self.api_domain}price'
         r = requests.get(url, headers=self.headers, params=self.querystring)
-        return json.loads(r.text)
+        content = json.loads(r.text)
+
+        self.raiseErrorOnBadRequest(content)
+        return content
 
 
     def getQuote(self)->dict:
         url = f'{self.api_domain}quote'
         r = requests.get(url, headers=self.headers, params=self.querystring)
-        return json.loads(r.text)
+        content = json.loads(r.text)
+
+        self.raiseErrorOnBadRequest(content)
+        return content
+
+    
+    def raiseErrorOnBadRequest(self, request_content:dict)->None:
+        if 'status' in request_content.keys() and request_content['status'] == 'error':
+            raise ValueError(request_content)
