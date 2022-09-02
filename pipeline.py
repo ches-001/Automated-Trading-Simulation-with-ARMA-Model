@@ -4,6 +4,7 @@ from requests import ConnectionError
 from ts_model import ARMA
 from api_utils import TwelveDataApiUtils
 from datetime import datetime
+import matplotlib.pyplot as plt
 
 class PipeLine:
     def __init__(self, model:ARMA, td:TwelveDataApiUtils):
@@ -19,6 +20,7 @@ class PipeLine:
         self.trainModel()
 
         self.info_to_log_ = None
+        self.profit_loss_count_ = {'profit':0, 'loss':0}
         
 
     def MakeNewDataRecord(self)->None:
@@ -45,7 +47,7 @@ class PipeLine:
         return self.model.fit(self.closing_prices_)
 
 
-    def makePrediction(self, timestamp)->dict:
+    def makePrediction(self, timestamp:str)->dict:
         n = self.model.estimator_lags + self.model.q - 1
         _input = self.closing_prices_.iloc[-n-1:-1]
         prediction = self.model.predict(_input)
@@ -57,7 +59,7 @@ class PipeLine:
         return response
 
 
-    def logInfo(self, record)->None:
+    def logInfo(self, record:dict)->None:
         if not os.path.isdir(self.dir_name_):
             os.mkdir(self.dir_name_)
 
@@ -82,9 +84,17 @@ class PipeLine:
         }
         return prediction_status
 
+    
+    def recordProfitLossCount(self, profit:bool)->None:
+        if profit:
+            self.profit_loss_count_['profit'] += 1
+        else:
+            self.profit_loss_count_['loss'] += 1
+
 
     def eventLoop(self)->None:        
         cycles = 0
+        loop_delay = 10
         
         while True:
             current_quote = None
@@ -97,6 +107,8 @@ class PipeLine:
             if not current_quote['is_market_open']:
                 self.MakeNewDataRecord()
                 self.trainModel(use_all=True)
+                #plot profit and loss counts in bar chart after session
+                plt.bar(self.profit_loss_count_.keys(), self.profit_loss_count_.values(), width=0.5)
                 print('The Market is currently closed')
                 break
             
@@ -118,6 +130,7 @@ class PipeLine:
                 if self.info_to_log_ is not None:
                     self.info_to_log_.update(actual_price=previous_price)
                     prediction_status = self.getPredictionStatus()
+                    self.recordProfitLossCount(prediction_status['accurate_prediction'])
                     self.logInfo(self.info_to_log_)
                 
                 print(
@@ -134,4 +147,4 @@ class PipeLine:
                     'actual_price':None,
                 }
                 cycles+=1
-            time.sleep(10)
+            time.sleep(loop_delay)

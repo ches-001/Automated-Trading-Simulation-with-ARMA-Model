@@ -1,2 +1,6 @@
 .env
 notebook.ipynb
+/__pycache__
+/ts_model/__pycache__
+/data
+/log
