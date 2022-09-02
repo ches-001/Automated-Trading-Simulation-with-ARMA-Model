@@ -7,7 +7,7 @@ for more info on the auto regression moving avarage model (ARMA) visit this [not
 documentation of twelve data API can be accessed here [here](https://rapidapi.com/twelvedata/api/twelve-data1/).
 
 ### DISCLAIMER
-This for educational purpose, use this for actual trading of stocks at your own risk.
+This is for educational purpose, use this for actual trading of stocks at your own risk.
 
 ### How to Run
 1. First clone the repository and run the following command: `pip install -r requirements.txt`.
