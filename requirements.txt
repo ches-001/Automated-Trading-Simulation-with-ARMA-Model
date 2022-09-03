@@ -2,3 +2,4 @@ numpy
 pandas
 dotenv
 matplotlib
+scikit-learn
