@@ -9,6 +9,6 @@ if __name__ == '__main__':
     active_duration = 3600 #1 hour
 
     api_utils = TwelveDataApiUtils(stock_symbol, interval, n_samples)
-    arma_model = ARMA((2, 1), 3)
+    arma_model = ARMA((2, 1), estimator_lags=3)
     pipeline = PipeLine(arma_model, api_utils, session_duration=active_duration)
     pipeline.eventLoop()

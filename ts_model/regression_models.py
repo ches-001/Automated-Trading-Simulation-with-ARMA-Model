@@ -1,42 +1,37 @@
 import numpy as np
 import pandas as pd
 from typing import Union
+from sklearn.linear_model import LinearRegression
+
 
 class AutoRegressionModel:
     r"""
-    AutoRegression Model
+    Auto Regression Model
     """
-    def __init__(self, nlags:int=5):
+    def __init__(self, base_regressor=LinearRegression(), nlags:int=2):
         self.nlags = nlags
-        self.coef_ = None
-        self.intercept_ = None
+        self.base_regressor = base_regressor
+        self.n_per_sample_ = self.nlags
         
-
     def fit(self, X:pd.Series):
         data_df = pd.DataFrame()
         
         for i in range(1, self.nlags+1):
             data_df[f'lag_{i}'] = X.shift(i)
 
-        data_df['ones'] = np.ones(X.shape[0])
         data_df['target'] = X
         data_df = data_df.dropna()
         
         X = data_df.drop('target', axis=1).values
-        Y = data_df['target'].values.reshape(-1, 1)
+        Y = data_df['target'].values.reshape(-1)
         
-        XX_cor_inv = np.linalg.inv(X.T @ X)
-        XY_cor = X.T @ Y
-        
-        params = XX_cor_inv @ XY_cor
-        self.coef_, self.intercept_ = params[:-1], params[-1]
-
+        self.base_regressor.fit(X, Y)
 
     def predict(self, X:Union[np.ndarray, pd.Series])->np.ndarray:
         if isinstance(X, pd.Series):
             X = X.values
         X = X.reshape(1, -1)
-        prediction = (X @ self.coef_ ) + self.intercept_
+        prediction = self.base_regressor.predict(X)
         return prediction.reshape(-1)
 
 
@@ -44,14 +39,12 @@ class MovingAverageModel:
     r"""
     Moving Average Model
     """
-    def __init__(self, estimator_lags, nlags:int=5):
+    def __init__(self, base_regressor=LinearRegression(), estimator_lags=2, nlags:int=2):
         self.nlags = nlags
-
+        self.base_regressor = base_regressor
         self.estimator_lags = estimator_lags
-        self.ar_estimator = self.ar_estimator = AutoRegressionModel(self.estimator_lags)
-
-        self.coef_ = None
-        self.intercept_ = None
+        self.n_per_sample_ = self.nlags + self.estimator_lags - 1
+        self.ar_estimator = self.ar_estimator = AutoRegressionModel(base_regressor, self.estimator_lags)
 
 
     def fit(self, X:pd.Series):
@@ -64,19 +57,13 @@ class MovingAverageModel:
         for i in range(1, self.nlags+1):
             data_df[f'error_lag_{i-1}'] = errors.shift(i)
         
-        data_df['ones'] = np.ones(X.shape[0])
         data_df['target'] = X
         data_df = data_df.dropna()
 
         X = data_df.drop('target', axis=1).values
-        Y = data_df['target'].values.reshape(-1, 1)
+        Y = data_df['target'].values.reshape(-1)
 
-        XX_cor_inv = np.linalg.inv(X.T @ X)
-        XY_cor = X.T @ Y
-        
-        params = XX_cor_inv @ XY_cor
-        self.coef_ = params[:-1]
-        self.intercept_ = params[-1]
+        self.base_regressor.fit(X, Y)
 
 
     def predict(self, X:Union[np.ndarray, pd.Series])->np.ndarray:
@@ -87,7 +74,7 @@ class MovingAverageModel:
         errors = X - estimates
         errors = errors.dropna().values.reshape(1, -1)
         
-        prediction = (errors @ self.coef_ ) + self.intercept_
+        prediction = self.base_regressor.predict(errors)
         return prediction.reshape(-1)
 
 
@@ -95,12 +82,12 @@ class ARMA:
     r"""
     AutoRegression Moving Average Model
     """
-    def __init__(self, pq:tuple, estimator_lags:int):
+    def __init__(self, pq:tuple, base_regressor=LinearRegression(),  estimator_lags:int=2):
+        self.base_regressor = base_regressor
         self.p, self.q = pq
         self.estimator_lags = estimator_lags
-
-        self.ar_estimator = AutoRegressionModel(self.estimator_lags)
-
+        self.n_per_sample_ = self.estimator_lags + self.q - 1
+        self.ar_estimator = AutoRegressionModel(base_regressor, self.estimator_lags)
         self.coef_ = None
         self.intercept_ = None
 
@@ -125,19 +112,14 @@ class ARMA:
         error_lags = self._getLags(errors, self.q, 'error_lag')
 
         data_df = pd.concat((X_lag, error_lags), axis=1)
-        data_df['ones'] = np.ones(len(X))
         data_df['target'] = X
         
         #drop na values
         data_df = data_df.dropna()
         X = data_df.drop('target', axis=1).values
-        Y = data_df['target'].values.reshape(-1, 1)
+        Y = data_df['target'].values.reshape(-1)
 
-        XX_cor_inv = np.linalg.inv(X.T @ X)
-        XY_cor = X.T @ Y
-        
-        params = XX_cor_inv @ XY_cor
-        self.coef_, self.intercept_ = params[:-1], params[-1]
+        self.base_regressor.fit(X, Y)
 
 
     def predict(self, X:Union[np.ndarray, pd.Series])->np.ndarray:
@@ -164,5 +146,5 @@ class ARMA:
         else:
             points = X.iloc[-self.p:].values.dropna().reshape(1, -1)
 
-        prediction = points @ self.coef_ + self.intercept_
+        prediction = self.base_regressor.predict(points)
         return prediction.reshape(-1)

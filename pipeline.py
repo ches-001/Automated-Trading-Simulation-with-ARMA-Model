@@ -11,18 +11,16 @@ class PipeLine:
         self.model = model
         self.td = td
         self.session_duration = session_duration
-        
         self.date_ = datetime.now().strftime('%Y-%m-%d')
         self.dir_name_ = 'logs'
-        self.log_filename_ = f'log-{self.date_}.json'
+        self.log_filename_ = f'log-{self.td.filename}-{self.date_}.json'
         self.closing_prices_ = None
         self.MakeNewDataRecord()
         self.getClosingPrices()
         self.trainModel()
-
         self.start_time_ = self.getCurrentTime()
-        self.stop_time_ = self.start_time_ + pd.to_timedelta(self.session_duration, unit='S') if self.session_duration else None
-
+        self.stop_time_ = self.start_time_ + pd.to_timedelta(self.session_duration, unit='S')\
+        if self.session_duration else None
         self.info_to_log_ = None
         self.profit_loss_count_ = {'profit':0, 'loss':0}
         
@@ -56,7 +54,7 @@ class PipeLine:
 
 
     def makePrediction(self, timestamp:str)->dict:
-        n = self.model.estimator_lags + self.model.q - 1
+        n = self.model.n_per_sample_
         _input = self.closing_prices_.iloc[-n-1:-1]
         prediction = self.model.predict(_input)
         
@@ -114,7 +112,7 @@ class PipeLine:
         while True:
             if self.stop_time_:
                 if self.getCurrentTime() >= self.stop_time_:
-                    print(f'session duration has elapsed at {self.getCurrentTime()}')
+                    print(f'>>>>> session duration has elapsed at {self.getCurrentTime()}')
                     self.finalEvents()
                     break
 
@@ -122,12 +120,13 @@ class PipeLine:
             try:
                 current_quote = self.td.getQuote()
             except ConnectionError:
-                print('connection error, retrying...')
+                print('>>>>> connection error, retrying...')
                 continue
             
             if not current_quote['is_market_open']:
-                print('The Market is currently closed')
-                self.finalEvents()
+                print('>>>>> The Market is currently closed')
+                if cycles != 0:
+                    self.finalEvents()
                 break
             
             last_timestamp = self.closing_prices_.index[-1]
